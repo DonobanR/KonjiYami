@@ -1,0 +1,199 @@
+syntax = "proto3";
+package rpcpb;
+option go_package = "konjiyami/protobuf/rpcpb";
+
+import "commonpb/common.proto";
+import "konjiyamipb/konjiyami.proto";
+import "clientpb/client.proto";
+
+
+service KonjiyamiRPC {
+
+    // *** Version ***
+    rpc GetVersion(commonpb.Empty) returns (clientpb.Version);
+
+    // *** Operator Commands *** 
+    rpc GetOperators(commonpb.Empty) returns (clientpb.Operators);
+
+    // *** Generic ***
+    rpc Kill(konjiyamipb.KillReq) returns (commonpb.Empty);
+    rpc Reconfigure(konjiyamipb.ReconfigureReq) returns (konjiyamipb.Reconfigure);
+    rpc Rename(clientpb.RenameReq) returns (commonpb.Empty);
+
+    // *** Sessions ***
+    rpc GetSessions(commonpb.Empty) returns (clientpb.Sessions);
+
+    // *** Beacons ***
+    rpc GetBeacons(commonpb.Empty) returns (clientpb.Beacons);
+    rpc GetBeacon(clientpb.Beacon) returns (clientpb.Beacon);
+    rpc RmBeacon(clientpb.Beacon) returns (commonpb.Empty);
+    rpc GetBeaconTasks(clientpb.Beacon) returns (clientpb.BeaconTasks);
+    rpc GetBeaconTaskContent(clientpb.BeaconTask) returns (clientpb.BeaconTask);
+    rpc CancelBeaconTask(clientpb.BeaconTask) returns (clientpb.BeaconTask);
+
+    // ***Threat monitoring ***
+    rpc MonitorStart(commonpb.Empty) returns (commonpb.Response);
+    rpc MonitorStop(commonpb.Empty) returns (commonpb.Empty);
+    
+    // *** Jobs ***
+    rpc GetJobs(commonpb.Empty) returns (clientpb.Jobs);
+    rpc KillJob(clientpb.KillJobReq) returns (clientpb.KillJob);
+
+    // *** Listeners ***
+    rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
+    rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
+    rpc StartDNSListener(clientpb.DNSListenerReq) returns (clientpb.DNSListener);
+    rpc StartHTTPSListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
+    rpc StartHTTPListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
+
+    // *** Stager Listener ***
+    rpc StartTCPStagerListener(clientpb.StagerListenerReq) returns(clientpb.StagerListener);
+    rpc StartHTTPStagerListener(clientpb.StagerListenerReq) returns(clientpb.StagerListener);
+
+    // *** Loot ***
+    rpc LootAdd(clientpb.Loot) returns(clientpb.Loot);
+    rpc LootRm(clientpb.Loot) returns(commonpb.Empty);
+    rpc LootUpdate(clientpb.Loot) returns(clientpb.Loot);
+    rpc LootContent(clientpb.Loot) returns(clientpb.Loot);
+    rpc LootAll(commonpb.Empty) returns(clientpb.AllLoot);
+    rpc LootAllOf(clientpb.Loot) returns(clientpb.AllLoot);
+
+    // *** Hosts ***
+    rpc Hosts(commonpb.Empty) returns(clientpb.AllHosts);
+    rpc Host(clientpb.Host) returns(clientpb.Host);
+    rpc HostRm(clientpb.Host) returns(commonpb.Empty);
+    rpc HostIOCRm(clientpb.IOC) returns(commonpb.Empty);
+
+    // *** Implants ***
+    rpc Generate(clientpb.GenerateReq) returns (clientpb.Generate);
+    rpc GenerateExternal(clientpb.ExternalGenerateReq) returns (clientpb.ExternalImplantConfig);
+    rpc GenerateExternalSaveBuild(clientpb.ExternalImplantBinary) returns (commonpb.Empty);
+    rpc GenerateExternalGetImplantConfig(clientpb.ImplantConfig) returns (clientpb.ExternalImplantConfig);
+    // rpc BuilderRegister(clientpb.Builder) returns (commonpb.Empty);
+    
+    rpc BuilderRegister(clientpb.Builder) returns (stream clientpb.Event);
+    rpc BuilderTrigger(clientpb.Event) returns (commonpb.Empty);
+    rpc Builders(commonpb.Empty) returns (clientpb.Builders);
+
+    rpc Regenerate(clientpb.RegenerateReq) returns (clientpb.Generate);
+    rpc ImplantBuilds(commonpb.Empty) returns (clientpb.ImplantBuilds);
+    rpc DeleteImplantBuild(clientpb.DeleteReq) returns (commonpb.Empty);
+    rpc Canaries(commonpb.Empty) returns (clientpb.Canaries);
+    rpc GenerateWGClientConfig(commonpb.Empty) returns (clientpb.WGClientConfig);
+    rpc GenerateUniqueIP(commonpb.Empty) returns (clientpb.UniqueWGIP);
+    rpc ImplantProfiles(commonpb.Empty) returns (clientpb.ImplantProfiles);
+    rpc DeleteImplantProfile(clientpb.DeleteReq) returns (commonpb.Empty);
+    rpc SaveImplantProfile(clientpb.ImplantProfile) returns (clientpb.ImplantProfile);
+    rpc MsfStage(clientpb.MsfStagerReq) returns (clientpb.MsfStager);
+    rpc ShellcodeRDI(clientpb.ShellcodeRDIReq) returns (clientpb.ShellcodeRDI);
+    rpc GetCompiler(commonpb.Empty) returns (clientpb.Compiler);
+    rpc ShellcodeEncoder(clientpb.ShellcodeEncodeReq) returns (clientpb.ShellcodeEncode);
+    rpc ShellcodeEncoderMap(commonpb.Empty) returns (clientpb.ShellcodeEncoderMap);
+
+    // *** Websites ***
+    rpc Websites(commonpb.Empty) returns (clientpb.Websites);
+    rpc Website(clientpb.Website) returns (clientpb.Website);
+    rpc WebsiteRemove(clientpb.Website) returns (commonpb.Empty);
+    rpc WebsiteAddContent(clientpb.WebsiteAddContent) returns (clientpb.Website);
+    rpc WebsiteUpdateContent(clientpb.WebsiteAddContent) returns (clientpb.Website);
+    rpc WebsiteRemoveContent(clientpb.WebsiteRemoveContent) returns (clientpb.Website);
+
+    // *** Session Interactions ***
+    rpc Ping(konjiyamipb.Ping) returns (konjiyamipb.Ping);
+    rpc Ps(konjiyamipb.PsReq) returns (konjiyamipb.Ps);
+    rpc Terminate(konjiyamipb.TerminateReq) returns (konjiyamipb.Terminate);
+    rpc Ifconfig(konjiyamipb.IfconfigReq) returns (konjiyamipb.Ifconfig);
+    rpc Netstat(konjiyamipb.NetstatReq) returns (konjiyamipb.Netstat);
+    rpc Ls(konjiyamipb.LsReq) returns (konjiyamipb.Ls);
+    rpc Cd(konjiyamipb.CdReq) returns (konjiyamipb.Pwd);
+    rpc Pwd(konjiyamipb.PwdReq) returns (konjiyamipb.Pwd);
+    rpc Mv(konjiyamipb.MvReq) returns (konjiyamipb.Mv);
+    rpc Rm(konjiyamipb.RmReq) returns (konjiyamipb.Rm);
+    rpc Mkdir(konjiyamipb.MkdirReq) returns (konjiyamipb.Mkdir);
+    rpc Download(konjiyamipb.DownloadReq) returns (konjiyamipb.Download);
+    rpc Upload(konjiyamipb.UploadReq) returns (konjiyamipb.Upload);
+    rpc Chmod(konjiyamipb.ChmodReq) returns (konjiyamipb.Chmod);
+    rpc Chown(konjiyamipb.ChownReq) returns (konjiyamipb.Chown);
+    rpc Chtimes(konjiyamipb.ChtimesReq) returns (konjiyamipb.Chtimes);
+    rpc MemfilesList(konjiyamipb.MemfilesListReq) returns (konjiyamipb.Ls);
+    rpc MemfilesAdd(konjiyamipb.MemfilesAddReq) returns (konjiyamipb.MemfilesAdd);
+    rpc MemfilesRm(konjiyamipb.MemfilesRmReq) returns (konjiyamipb.MemfilesRm);
+    rpc ProcessDump(konjiyamipb.ProcessDumpReq) returns (konjiyamipb.ProcessDump);
+    rpc RunAs(konjiyamipb.RunAsReq) returns (konjiyamipb.RunAs);
+    rpc Impersonate(konjiyamipb.ImpersonateReq) returns (konjiyamipb.Impersonate);
+    rpc RevToSelf(konjiyamipb.RevToSelfReq) returns (konjiyamipb.RevToSelf);
+    rpc GetSystem(clientpb.GetSystemReq) returns (konjiyamipb.GetSystem);
+    rpc Task(konjiyamipb.TaskReq) returns (konjiyamipb.Task);
+    rpc Msf(clientpb.MSFReq) returns (konjiyamipb.Task);
+    rpc MsfRemote(clientpb.MSFRemoteReq) returns (konjiyamipb.Task);
+    rpc ExecuteAssembly(konjiyamipb.ExecuteAssemblyReq) returns (konjiyamipb.ExecuteAssembly);
+    rpc Migrate(clientpb.MigrateReq) returns (konjiyamipb.Migrate);
+    rpc Execute(konjiyamipb.ExecuteReq) returns (konjiyamipb.Execute);
+    rpc ExecuteWindows(konjiyamipb.ExecuteWindowsReq) returns (konjiyamipb.Execute);
+    rpc Sideload(konjiyamipb.SideloadReq) returns (konjiyamipb.Sideload);
+    rpc SpawnDll(konjiyamipb.InvokeSpawnDllReq) returns (konjiyamipb.SpawnDll);
+    rpc Screenshot(konjiyamipb.ScreenshotReq) returns (konjiyamipb.Screenshot);
+    rpc CurrentTokenOwner(konjiyamipb.CurrentTokenOwnerReq) returns (konjiyamipb.CurrentTokenOwner);
+    
+    // *** Pivots ***
+    rpc PivotStartListener(konjiyamipb.PivotStartListenerReq) returns (konjiyamipb.PivotListener);
+    rpc PivotStopListener(konjiyamipb.PivotStopListenerReq) returns (commonpb.Empty);
+    rpc PivotSessionListeners(konjiyamipb.PivotListenersReq) returns (konjiyamipb.PivotListeners);
+    rpc PivotGraph(commonpb.Empty) returns (clientpb.PivotGraph);
+
+    rpc StartService(konjiyamipb.StartServiceReq) returns (konjiyamipb.ServiceInfo);
+    rpc StopService(konjiyamipb.StopServiceReq) returns (konjiyamipb.ServiceInfo);
+    rpc RemoveService(konjiyamipb.RemoveServiceReq) returns (konjiyamipb.ServiceInfo);
+
+    rpc MakeToken(konjiyamipb.MakeTokenReq) returns (konjiyamipb.MakeToken);
+    rpc GetEnv(konjiyamipb.EnvReq) returns (konjiyamipb.EnvInfo);
+    rpc SetEnv(konjiyamipb.SetEnvReq) returns (konjiyamipb.SetEnv);
+    rpc UnsetEnv(konjiyamipb.UnsetEnvReq) returns (konjiyamipb.UnsetEnv);
+    rpc Backdoor(konjiyamipb.BackdoorReq) returns (konjiyamipb.Backdoor);
+    rpc RegistryRead(konjiyamipb.RegistryReadReq) returns (konjiyamipb.RegistryRead);
+    rpc RegistryWrite(konjiyamipb.RegistryWriteReq) returns (konjiyamipb.RegistryWrite);
+    rpc RegistryCreateKey(konjiyamipb.RegistryCreateKeyReq) returns (konjiyamipb.RegistryCreateKey);
+    rpc RegistryDeleteKey(konjiyamipb.RegistryDeleteKeyReq) returns (konjiyamipb.RegistryDeleteKey);
+    rpc RegistryListSubKeys(konjiyamipb.RegistrySubKeyListReq) returns (konjiyamipb.RegistrySubKeyList);
+    rpc RegistryListValues(konjiyamipb.RegistryListValuesReq) returns (konjiyamipb.RegistryValuesList);
+    rpc RunSSHCommand(konjiyamipb.SSHCommandReq) returns (konjiyamipb.SSHCommand);
+    rpc HijackDLL(clientpb.DllHijackReq) returns (clientpb.DllHijack);
+    rpc GetPrivs(konjiyamipb.GetPrivsReq) returns (konjiyamipb.GetPrivs);
+    rpc StartRportFwdListener(konjiyamipb.RportFwdStartListenerReq) returns (konjiyamipb.RportFwdListener);
+    rpc GetRportFwdListeners(konjiyamipb.RportFwdListenersReq) returns (konjiyamipb.RportFwdListeners);
+    rpc StopRportFwdListener(konjiyamipb.RportFwdStopListenerReq) returns (konjiyamipb.RportFwdListener);
+
+    // Beacon only commands
+    rpc OpenSession(konjiyamipb.OpenSession) returns (konjiyamipb.OpenSession);
+    rpc CloseSession(konjiyamipb.CloseSession) returns (commonpb.Empty);
+    
+    // Extensions
+    rpc RegisterExtension(konjiyamipb.RegisterExtensionReq) returns (konjiyamipb.RegisterExtension);
+    rpc CallExtension(konjiyamipb.CallExtensionReq) returns (konjiyamipb.CallExtension);
+    rpc ListExtensions(konjiyamipb.ListExtensionsReq) returns (konjiyamipb.ListExtensions);
+    
+    // *** Wireguard Specific ***
+    rpc WGStartPortForward(konjiyamipb.WGPortForwardStartReq) returns (konjiyamipb.WGPortForward);
+    rpc WGStopPortForward(konjiyamipb.WGPortForwardStopReq) returns (konjiyamipb.WGPortForward);
+    rpc WGStartSocks(konjiyamipb.WGSocksStartReq) returns (konjiyamipb.WGSocks);
+    rpc WGStopSocks(konjiyamipb.WGSocksStopReq) returns (konjiyamipb.WGSocks);
+    rpc WGListForwarders(konjiyamipb.WGTCPForwardersReq) returns (konjiyamipb.WGTCPForwarders);
+    rpc WGListSocksServers(konjiyamipb.WGSocksServersReq) returns (konjiyamipb.WGSocksServers);
+
+    // *** Realtime Commands ***
+    rpc Shell(konjiyamipb.ShellReq) returns (konjiyamipb.Shell);
+    rpc Portfwd(konjiyamipb.PortfwdReq) returns (konjiyamipb.Portfwd);
+
+    // *** Socks5 ***
+    rpc CreateSocks(konjiyamipb.Socks) returns (konjiyamipb.Socks);
+    rpc CloseSocks(konjiyamipb.Socks) returns (commonpb.Empty);
+    rpc SocksProxy(stream konjiyamipb.SocksData) returns (stream konjiyamipb.SocksData);
+
+    // *** Tunnels ***
+    rpc CreateTunnel(konjiyamipb.Tunnel) returns (konjiyamipb.Tunnel);
+    rpc CloseTunnel(konjiyamipb.Tunnel) returns (commonpb.Empty);
+    rpc TunnelData(stream konjiyamipb.TunnelData) returns (stream konjiyamipb.TunnelData);
+
+    // *** Events ***
+    rpc Events(commonpb.Empty) returns (stream clientpb.Event);
+}

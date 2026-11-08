@@ -1,0 +1,1002 @@
+openapi: "3.0.3"
+info:
+  title: KonjiYami C2 API
+  version: "0.2.0-dev"
+  description: |
+    REST API for the KonjiYami C2 framework.
+    All endpoints are under `/api/v1`.
+    Auth is a pass-through placeholder until Sprint 4 (JWT).
+    The server binds to `127.0.0.1:8080` until Sprint 4.
+
+    Error responses conform to RFC 7807 (Problem Details for HTTP APIs).
+servers:
+  - url: http://127.0.0.1:8080/api/v1
+    description: Local dev server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: system
+    description: Health, version, and aggregate status
+  - name: listeners
+    description: C2 listener jobs
+  - name: sessions
+    description: Interactive implant sessions
+  - name: beacons
+    description: Async beacon implants
+  - name: implants
+    description: Implant build history
+  - name: payloads
+    description: Saved implant payload store
+  - name: artifacts
+    description: Generated artifact file downloads
+
+paths:
+
+  # ── System ──────────────────────────────────────────────────────────────────
+
+  /health:
+    get:
+      tags: [system]
+      summary: Health check
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Server is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /version:
+    get:
+      tags: [system]
+      summary: Server version
+      operationId: getVersion
+      security: []
+      responses:
+        "200":
+          description: Version string
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version]
+                properties:
+                  version:
+                    type: string
+                    example: 0.2.0-dev
+
+  /status:
+    get:
+      tags: [system]
+      summary: Aggregate system status with full entity arrays
+      operationId: getStatus
+      description: |
+        Returns counts AND full entity arrays for sessions, beacons, and listeners.
+        Called by the UI every 4s to update the dashboard.
+      responses:
+        "200":
+          description: Aggregate status including all active entities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+
+  # ── Listeners ───────────────────────────────────────────────────────────────
+
+  /listeners:
+    get:
+      tags: [listeners]
+      summary: List active listeners
+      operationId: listListeners
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      responses:
+        "200":
+          description: Paginated array of listeners
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedListeners"
+
+    post:
+      tags: [listeners]
+      summary: Start a new listener (protocol in body)
+      operationId: createListener
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateListenerRequest"
+      responses:
+        "201":
+          description: Listener started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listener"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /listeners/{kind}:
+    post:
+      tags: [listeners]
+      summary: Start a new listener (protocol in URL — UI compatibility alias)
+      operationId: createListenerByKind
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [mtls, http, https, dns, wg]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateListenerRequest"
+      responses:
+        "201":
+          description: Listener started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listener"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /listeners/{id}:
+    delete:
+      tags: [listeners]
+      summary: Kill a listener
+      operationId: killListener
+      parameters:
+        - $ref: "#/components/parameters/NumericID"
+      responses:
+        "200":
+          description: Listener killed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusOK"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Jobs (alias for listeners) ───────────────────────────────────────────────
+
+  /jobs:
+    get:
+      tags: [listeners]
+      summary: List jobs (alias for GET /listeners)
+      operationId: listJobs
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      responses:
+        "200":
+          description: Paginated array of jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedListeners"
+
+  /jobs/{id}:
+    delete:
+      tags: [listeners]
+      summary: Kill a job (alias for DELETE /listeners/{id})
+      operationId: killJob
+      parameters:
+        - $ref: "#/components/parameters/NumericID"
+      responses:
+        "200":
+          description: Job killed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusOK"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Sessions ─────────────────────────────────────────────────────────────────
+
+  /sessions:
+    get:
+      tags: [sessions]
+      summary: List active sessions
+      operationId: listSessions
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      responses:
+        "200":
+          description: Paginated array of sessions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedSessions"
+
+  /sessions/{id}:
+    delete:
+      tags: [sessions]
+      summary: Kill a session
+      operationId: killSession
+      parameters:
+        - $ref: "#/components/parameters/StringID"
+      responses:
+        "200":
+          description: Session killed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusOK"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /sessions/{id}/console:
+    post:
+      tags: [sessions]
+      summary: Execute a shell command in a session
+      operationId: sessionConsole
+      description: |
+        Sends a shell command to the implant over the C2 channel.
+        On Windows the command runs via `cmd.exe /C`; on other platforms via `sh -c`.
+        Times out after 60 seconds if the implant does not respond.
+      parameters:
+        - $ref: "#/components/parameters/StringID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [command]
+              properties:
+                command:
+                  type: string
+                  example: whoami
+      responses:
+        "200":
+          description: Command output
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [output, status]
+                properties:
+                  output:
+                    type: string
+                  status:
+                    type: integer
+                    description: Exit code
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "504":
+          description: Implant did not respond within the timeout
+
+  /sessions/{id}/actions:
+    post:
+      tags: [sessions]
+      summary: Run a named quick action on a session
+      operationId: sessionAction
+      description: |
+        Dispatches a predefined action to the session.
+        Supported actions: kill, ps, whoami, getuid, netstat, ifconfig, screenshot.
+      parameters:
+        - $ref: "#/components/parameters/StringID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [kill, ps, whoami, getuid, netstat, ifconfig, screenshot]
+                args:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Action result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, action]
+                properties:
+                  ok:
+                    type: boolean
+                  action:
+                    type: string
+                  output:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Session is not alive
+        "504":
+          description: Implant did not respond within the timeout
+
+  # ── Beacons ──────────────────────────────────────────────────────────────────
+
+  /beacons:
+    get:
+      tags: [beacons]
+      summary: List beacons
+      operationId: listBeacons
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      responses:
+        "200":
+          description: Paginated array of beacons
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedBeacons"
+
+  /beacons/{id}:
+    delete:
+      tags: [beacons]
+      summary: Delete a beacon record and all its tasks
+      operationId: killBeacon
+      parameters:
+        - $ref: "#/components/parameters/StringID"
+      responses:
+        "200":
+          description: Beacon deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusOK"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Implants ─────────────────────────────────────────────────────────────────
+
+  /implants:
+    get:
+      tags: [implants]
+      summary: List implant build history
+      operationId: listImplants
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      responses:
+        "200":
+          description: Paginated array of implant build records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedImplants"
+
+  /implants/generate:
+    post:
+      tags: [implants]
+      summary: Generate an implant
+      operationId: generateImplant
+      description: |
+        Compiles an implant.
+        - Default: returns the binary as `application/octet-stream` with `X-Implant-Name` and `X-Implant-Size` headers.
+        - With `Accept: application/json`: returns `{id, name, size}` JSON (used by the UI to show a download link).
+
+        Use `POST /payloads` to generate and persist the file for later re-download.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateImplantRequest"
+      responses:
+        "200":
+          description: Binary stream or JSON metadata depending on Accept header
+          headers:
+            X-Implant-Name:
+              schema:
+                type: string
+            X-Implant-Size:
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: object
+                required: [id, name, size]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  size:
+                    type: integer
+                    format: int64
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Payloads ─────────────────────────────────────────────────────────────────
+
+  /payloads:
+    get:
+      tags: [payloads]
+      summary: List saved payloads
+      operationId: listPayloads
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      responses:
+        "200":
+          description: Paginated array of payload records (no internal paths)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedPayloads"
+
+    post:
+      tags: [payloads]
+      summary: Generate an implant and save it to the payload store
+      operationId: createPayload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePayloadRequest"
+      responses:
+        "201":
+          description: Payload record created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadRecord"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /payloads/{id}:
+    get:
+      tags: [payloads]
+      summary: Get a payload record
+      operationId: getPayload
+      parameters:
+        - $ref: "#/components/parameters/StringID"
+      responses:
+        "200":
+          description: Payload record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadRecord"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [payloads]
+      summary: Delete a payload (record + file)
+      operationId: deletePayload
+      parameters:
+        - $ref: "#/components/parameters/StringID"
+      responses:
+        "200":
+          description: Payload deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusDeleted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /payloads/{id}/download:
+    get:
+      tags: [payloads]
+      summary: Download a saved payload binary
+      operationId: downloadPayload
+      parameters:
+        - $ref: "#/components/parameters/StringID"
+      responses:
+        "200":
+          description: Binary file stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          description: Payload file no longer available on disk
+
+  # ── Artifacts ────────────────────────────────────────────────────────────────
+
+  /artifacts/{path}:
+    get:
+      tags: [artifacts]
+      summary: Download an artifact file by relative path
+      operationId: getArtifact
+      parameters:
+        - name: path
+          in: path
+          required: true
+          style: simple
+          description: Relative path under the artifacts directory (forward slashes)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Binary file stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: Path outside allowed artifact directory
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+# ── Components ────────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT auth — placeholder until Sprint 4. All tokens accepted today."
+
+  parameters:
+    NumericID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    StringID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 100
+        minimum: 1
+        maximum: 500
+    OffsetParam:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+  responses:
+    BadRequest:
+      description: Invalid request body or parameters
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalError:
+      description: Server-side error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+
+    # ── RFC 7807 error ────────────────────────────────────────────────────────
+
+    Error:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          default: "about:blank"
+          description: URI identifying the problem type
+        title:
+          type: string
+          description: Short human-readable summary
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Human-readable explanation of the problem
+        instance:
+          type: string
+          format: uri
+          description: URI reference to the specific occurrence
+
+    # ── Utility ───────────────────────────────────────────────────────────────
+
+    StatusOK:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: killed
+
+    StatusDeleted:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: deleted
+
+    # ── Aggregate status ──────────────────────────────────────────────────────
+
+    Status:
+      type: object
+      required: [version, sessions, beacons, listeners, jobs, logs, username,
+                 listenerCount, sessionCount, beaconCount, payloadCount, lastUpdatedUTC]
+      properties:
+        version:
+          type: string
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+        beacons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Beacon"
+        listeners:
+          type: array
+          items:
+            $ref: "#/components/schemas/Listener"
+        jobs:
+          type: array
+          description: Alias for listeners (UI compatibility)
+          items:
+            $ref: "#/components/schemas/Listener"
+        logs:
+          type: array
+          items:
+            type: string
+        username:
+          type: string
+        listenerCount:
+          type: integer
+        sessionCount:
+          type: integer
+        beaconCount:
+          type: integer
+        payloadCount:
+          type: integer
+        lastUpdatedUTC:
+          type: string
+          format: date-time
+
+    # ── Shared base schemas ───────────────────────────────────────────────────
+
+    AgentBase:
+      type: object
+      required: [id, name, hostname, username, os, arch, transport]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        hostname:
+          type: string
+        username:
+          type: string
+        os:
+          type: string
+        arch:
+          type: string
+        transport:
+          type: string
+
+    ImplantConfig:
+      type: object
+      properties:
+        name:
+          type: string
+        os:
+          type: string
+          default: windows
+        arch:
+          type: string
+          default: amd64
+        format:
+          type: string
+          enum: [exe, dll, shellcode, service]
+          default: exe
+        listener:
+          type: string
+          description: C2 URL (e.g. mtls://10.0.0.1:4444)
+        isBeacon:
+          type: boolean
+        beaconInterval:
+          type: integer
+          description: Check-in interval in seconds
+        beaconJitter:
+          type: integer
+          description: Check-in jitter in seconds
+
+    # ── Listener ──────────────────────────────────────────────────────────────
+
+    Listener:
+      type: object
+      required: [id, name, protocol, port]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        protocol:
+          type: string
+          enum: [mtls, http, https, dns, wg]
+        port:
+          type: integer
+        domains:
+          type: array
+          items:
+            type: string
+
+    CreateListenerRequest:
+      type: object
+      required: [protocol, port]
+      properties:
+        protocol:
+          type: string
+          enum: [mtls, http, https, dns, wg]
+        host:
+          type: string
+          default: "0.0.0.0"
+        port:
+          type: integer
+          minimum: 1
+          maximum: 65534
+        domain:
+          type: string
+        secure:
+          type: boolean
+
+    # ── Session ───────────────────────────────────────────────────────────────
+
+    Session:
+      allOf:
+        - $ref: "#/components/schemas/AgentBase"
+        - type: object
+          required: [isDead, health]
+          properties:
+            remoteAddress:
+              type: string
+            pid:
+              type: integer
+            filename:
+              type: string
+            lastCheckin:
+              type: string
+              format: date-time
+            isDead:
+              type: boolean
+            health:
+              type: string
+              enum: [ALIVE, DEAD]
+
+    # ── Beacon ────────────────────────────────────────────────────────────────
+
+    Beacon:
+      allOf:
+        - $ref: "#/components/schemas/AgentBase"
+        - type: object
+          required: [interval, jitter]
+          properties:
+            interval:
+              type: integer
+              description: Check-in interval in seconds
+            jitter:
+              type: integer
+              description: Check-in jitter in seconds
+            nextCheckin:
+              type: integer
+              format: int64
+              description: Unix timestamp of next check-in
+            lastCheckin:
+              type: integer
+              format: int64
+              description: Unix timestamp of last check-in
+
+    # ── Implant build ─────────────────────────────────────────────────────────
+
+    ImplantBuild:
+      type: object
+      required: [name, os, arch, format, isBeacon]
+      properties:
+        name:
+          type: string
+        os:
+          type: string
+        arch:
+          type: string
+        format:
+          type: string
+          enum: [exe, dll, shellcode, service]
+          description: Same enum as GenerateImplantRequest.format
+        isBeacon:
+          type: boolean
+        beaconInterval:
+          type: integer
+          description: Nanoseconds (raw protobuf value from DB)
+        beaconJitter:
+          type: integer
+          description: Nanoseconds (raw protobuf value from DB)
+
+    GenerateImplantRequest:
+      allOf:
+        - $ref: "#/components/schemas/ImplantConfig"
+
+    CreatePayloadRequest:
+      allOf:
+        - $ref: "#/components/schemas/ImplantConfig"
+        - type: object
+          required: [os, arch, format]
+
+    # ── Payload record ────────────────────────────────────────────────────────
+
+    PayloadRecord:
+      type: object
+      required: [id, name, os, arch, format, size, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        os:
+          type: string
+        arch:
+          type: string
+        format:
+          type: string
+          enum: [exe, dll, shellcode, service]
+        listener:
+          type: string
+        isBeacon:
+          type: boolean
+        beaconInterval:
+          type: integer
+          description: Seconds
+        beaconJitter:
+          type: integer
+          description: Seconds
+        size:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Paginated wrappers ────────────────────────────────────────────────────
+
+    PaginatedListeners:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Listener"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    PaginatedSessions:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    PaginatedBeacons:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Beacon"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    PaginatedImplants:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImplantBuild"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    PaginatedPayloads:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayloadRecord"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer

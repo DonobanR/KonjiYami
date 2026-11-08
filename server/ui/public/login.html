@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KonjiYami</title>
+  <link rel="icon" type="image/png" href="/assets/logo_app.png" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Share+Tech+Mono&display=swap');
+    :root {
+      --gold:       #d4af37;
+      --gold-bright:#f0c040;
+      --gold-deep:  #8a6f10;
+      --gold-glow:  rgba(212,175,55,0.18);
+      --bg:         #030302;
+      --panel:      #08080580;
+      --border:     rgba(212,175,55,0.22);
+      --text:       #efefef;
+      --muted:      #888;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+    }
+
+    .frame {
+      width: min(400px, 92vw);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px 36px;
+      box-shadow: 0 0 60px rgba(212,175,55,0.08), 0 2px 40px rgba(0,0,0,0.7);
+      backdrop-filter: blur(16px);
+    }
+
+    /* — Mark — */
+    .mark {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 32px;
+    }
+    .mark-hex {
+      width: 56px;
+      height: 56px;
+      position: relative;
+    }
+    .mark-hex svg { width: 100%; height: 100%; }
+    .mark-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .mark-sub {
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    /* — Form — */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .field label {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .field input {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.95rem;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .field input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+
+    .btn-login {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--gold-deep), var(--gold));
+      border: none;
+      border-radius: 8px;
+      color: #0a0800;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.1s ease;
+    }
+    .btn-login:hover { opacity: 0.92; }
+    .btn-login:active { transform: scale(0.99); }
+    .btn-login:disabled { opacity: 0.5; cursor: wait; }
+
+    .err {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 12px;
+      background: rgba(220,60,60,0.1);
+      border: 1px solid rgba(220,60,60,0.3);
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: #f08080;
+      text-align: center;
+    }
+    .err.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="mark">
+      <div class="mark-hex">
+        <img src="/assets/logo_app.png" alt="KonjiYami" style="width:56px;height:56px;border-radius:12px;object-fit:contain;box-shadow:0 0 20px rgba(212,175,55,0.15)" />
+      </div>
+      <span class="mark-name">KonjiYami</span>
+      <span class="mark-sub">金色の闇 — Golden Darkness</span>
+    </div>
+
+    <form id="login-form">
+      <div class="field">
+        <label for="u">Username</label>
+        <input id="u" name="username" type="text" autocomplete="username" autofocus required />
+      </div>
+      <div class="field">
+        <label for="p">Password</label>
+        <input id="p" name="password" type="password" autocomplete="current-password" required />
+      </div>
+      <button class="btn-login" type="submit" id="btn-login">Access</button>
+    </form>
+
+    <div class="err" id="errMsg"></div>
+  </div>
+
+  <script>
+    // If already authenticated, go to main UI
+    if (localStorage.getItem('kj_access_token')) {
+      window.location.href = '/';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var username = document.getElementById('u').value;
+      var password = document.getElementById('p').value;
+      var errEl = document.getElementById('errMsg');
+      var btn = document.getElementById('btn-login');
+
+      errEl.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Authenticating...';
+
+      try {
+        var r = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: username, password: password })
+        });
+
+        if (!r.ok) {
+          var data = {};
+          try { data = await r.json(); } catch(_) {}
+          throw new Error(data.detail || 'Invalid credentials');
+        }
+
+        var data = await r.json();
+        localStorage.setItem('kj_access_token', data.access_token);
+        localStorage.setItem('kj_refresh_token', data.refresh_token);
+        localStorage.setItem('kj_username', data.username);
+        localStorage.setItem('kj_role', data.role);
+        window.location.href = '/';
+      } catch(err) {
+        errEl.textContent = err.message || 'Invalid credentials. Try again.';
+        errEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Access';
+      }
+    });
+  </script>
+</body>
+</html>

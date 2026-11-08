@@ -1,0 +1,45 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Data / secrets
+*.db
+*.sqlite
+*.log
+*.jsonl
+*.cfg
+*.pem
+*.key
+audit.jsonl
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+/konjiyami-server
+/konjiyami-client
+/konjiyami-broker
+
+# Local workspace
+go.work
+go.work.sum
+
+# Internal docs
+vault/
+docs/
+AGENTS.md
+PROJECT_STATE.md
+DECISIONS.md
+DEPLOYMENT.md
+configs/

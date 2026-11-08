@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KonjiYami Console</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      color: white;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #topbar {
+      background-color: #050505;
+      color: #0df25d;
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+    }
+    #terminal-container {
+      flex-grow: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #bottom-bar {
+      background-color: #111;
+      color: white;
+      padding: 6px 10px;
+      border-top: 1px solid #333;
+    }
+    .file-actions {
+      margin-bottom: 4px;
+    }
+    .file-actions form {
+      display: inline;
+      margin-right: 10px;
+    }
+    .file-list {
+      margin-top: 4px;
+    }
+    .file-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #000;
+      padding: 2px 0;
+    }
+    .file-entry a {
+      color: #0df25d;
+      text-decoration: none;
+      font-size: 0.9em;
+      flex-grow: 1;
+    }
+    .file-entry button {
+      background: #600;
+      color: white;
+      border: none;
+      padding: 2px 6px;
+      cursor: pointer;
+      font-size: 0.8em;
+    }
+    .file-entry button:hover {
+      background: #a00;
+    }
+    #broker-panel,
+    #jobs-panel,
+    #beacons-panel {
+      margin-top: 8px;
+      background: #050505;
+      border: 1px solid #0df25d33;
+      padding: 6px;
+    }
+    #sessionList,
+    #jobsList,
+    #beaconList {
+      max-height: 120px;
+      overflow-y: auto;
+      padding-left: 18px;
+      margin: 6px 0 0;
+    }
+    .list-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .list-entry button {
+      background: #b32121;
+      color: #fff;
+      border: none;
+      padding: 2px 8px;
+      cursor: pointer;
+    }
+    .list-entry button:hover {
+      background: #ff4c4c;
+    }
+    #listener-panel {
+      margin-top: 8px;
+      background: #050505;
+      border: 1px solid #0df25d33;
+      padding: 6px;
+    }
+    .listener-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .listener-card {
+      border: 1px solid #0df25d33;
+      padding: 6px;
+      background: #010101;
+    }
+    .listener-card h4 {
+      margin: 0 0 4px;
+      font-size: 0.95em;
+      color: #0df25d;
+    }
+    .listener-card label {
+      display: block;
+      font-size: 0.8em;
+      margin-bottom: 4px;
+    }
+    .listener-card input {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 3px;
+      font-family: inherit;
+    }
+    .listener-card button {
+      width: 100%;
+      margin-top: 6px;
+      background: #0b5;
+      border: none;
+      color: #fff;
+      padding: 4px 0;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .listener-card button:hover {
+      background: #0df25d;
+      color: #000;
+    }
+    .listener-status {
+      margin-top: 6px;
+      font-size: 0.85em;
+      color: #0df25d;
+    }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <span id="userDisplay">Logged in as: ...</span>
+    <a href="/logout" style="color:#ff3860; text-decoration:none;">Logout</a>
+  </div>
+
+  <div id="terminal-container"></div>
+
+  <div id="bottom-bar">
+    <div class="file-actions">
+      <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" />
+        <button type="submit">Upload</button>
+      </form>
+    </div>
+    <div class="file-list">
+      <strong>Shared Files:</strong>
+      <div id="fileLinks"></div>
+    </div>
+    <section id="broker-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>Broker Sessions</strong>
+        <button type="button" onclick="loadSessions()">Refresh</button>
+      </div>
+      <div id="brokerStatus" style="font-size:0.85em;color:#0df25d99;margin-top:4px;">Awaiting data…</div>
+      <ul id="sessionList"></ul>
+    </section>
+    <section id="jobs-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>Jobs</strong>
+        <button type="button" onclick="loadJobs()">Refresh</button>
+      </div>
+      <div id="jobStatus" style="font-size:0.85em;color:#0df25d99;margin-top:4px;">Awaiting data…</div>
+      <ul id="jobsList"></ul>
+    </section>
+    <section id="beacons-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>Beacons</strong>
+        <button type="button" onclick="loadBeacons()">Refresh</button>
+      </div>
+      <div id="beaconStatus" style="font-size:0.85em;color:#0df25d99;margin-top:4px;">Awaiting data…</div>
+      <ul id="beaconList"></ul>
+    </section>
+    <section id="listener-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>Listener Quick Actions</strong>
+        <span style="font-size:0.8em;color:#888;">Despliega listeners HTTP/HTTPS/mTLS/DNS</span>
+      </div>
+      <div class="listener-grid">
+        <div class="listener-card">
+          <h4>mTLS</h4>
+          <label>LHOST
+            <input id="mtlsHost" type="text" value="0.0.0.0" />
+          </label>
+          <label>LPORT
+            <input id="mtlsPort" type="number" value="31337" min="1" max="65535" />
+          </label>
+          <button type="button" onclick="startListener('mtls')">Start mTLS</button>
+        </div>
+        <div class="listener-card">
+          <h4>HTTP</h4>
+          <label>LHOST
+            <input id="httpHost" type="text" value="0.0.0.0" />
+          </label>
+          <label>LPORT
+            <input id="httpPort" type="number" value="80" min="1" max="65535" />
+          </label>
+          <button type="button" onclick="startListener('http')">Start HTTP</button>
+        </div>
+        <div class="listener-card">
+          <h4>HTTPS</h4>
+          <label>LHOST
+            <input id="httpsHost" type="text" value="0.0.0.0" />
+          </label>
+          <label>LPORT
+            <input id="httpsPort" type="number" value="443" min="1" max="65535" />
+          </label>
+          <button type="button" onclick="startListener('https')">Start HTTPS</button>
+        </div>
+        <div class="listener-card">
+          <h4>DNS</h4>
+          <label>LHOST
+            <input id="dnsHost" type="text" value="0.0.0.0" />
+          </label>
+          <label>LPORT
+            <input id="dnsPort" type="number" value="53" min="1" max="65535" />
+          </label>
+          <label>Domain (opcional)
+            <input id="dnsDomain" type="text" placeholder="konjiyami.local" />
+          </label>
+          <button type="button" onclick="startListener('dns')">Start DNS</button>
+        </div>
+      </div>
+      <div id="listenerStatus" class="listener-status"></div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.min.js"></script>
+  <script>
+    const term = new Terminal({
+      convertEol: true,
+      fontFamily: 'monospace',
+      fontSize: 14,
+      cursorBlink: true,
+      allowProposedApi: true,
+      allowTransparency: true,
+      windowsMode: true
+    });
+
+    term.attachCustomKeyEventHandler(() => true);
+
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+
+    const terminalContainer = document.getElementById('terminal-container');
+    term.open(terminalContainer);
+    fitAddon.fit();
+
+    const socket = new WebSocket(`wss://${location.host}`);
+    socket.onopen = () => {
+      fitAddon.fit();
+      window.addEventListener('resize', () => {
+        fitAddon.fit();
+        socket.send(JSON.stringify({ resize: { cols: term.cols, rows: term.rows } }));
+      });
+    };
+
+    socket.onmessage = e => term.write(e.data);
+    term.onData(data => socket.send(data));
+
+    fetch('/whoami')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('userDisplay').textContent = `Logged in as: ${data.username}`;
+      });
+
+    function deleteFile(filename) {
+      fetch(`/delete/${encodeURIComponent(filename)}`, {
+        method: 'DELETE'
+      }).then(res => {
+        if (res.ok) {
+          loadFiles();
+        } else {
+          alert('Failed to delete file');
+        }
+      });
+    }
+
+    function loadFiles() {
+      fetch('/filelist')
+        .then(res => res.json())
+        .then(files => {
+          const fileLinks = document.getElementById('fileLinks');
+          fileLinks.innerHTML = '';
+          files.forEach(f => {
+            const entry = document.createElement('div');
+            entry.className = 'file-entry';
+
+            const a = document.createElement('a');
+            a.href = `/files/${f}`;
+            a.textContent = f;
+            a.download = f;
+
+            const btn = document.createElement('button');
+            btn.textContent = 'Delete';
+            btn.onclick = () => deleteFile(f);
+
+            entry.appendChild(a);
+            entry.appendChild(btn);
+            fileLinks.appendChild(entry);
+          });
+        });
+    }
+
+    async function hydrateList(endpoint, statusEl, listEl, render) {
+      statusEl.textContent = 'Loading…';
+      listEl.innerHTML = '';
+      try {
+        const res = await fetch(endpoint);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const payload = await res.json();
+        const rows = Array.isArray(payload) ? payload : [];
+        if (!rows.length) {
+          statusEl.textContent = 'No data.';
+          return;
+        }
+        statusEl.textContent = `${rows.length} item(s)`;
+        rows.forEach(row => listEl.appendChild(render(row)));
+      } catch (err) {
+        console.error(`Failed to load ${endpoint}`, err);
+        statusEl.textContent = `Broker unreachable (${err.message})`;
+      }
+    }
+
+    function renderSession(sess) {
+      const li = document.createElement('li');
+      li.className = 'list-entry';
+      const span = document.createElement('span');
+      span.textContent = `${sess.ID || '?'} · ${sess.Hostname || 'unknown'} (${sess.OS || 'OS'}) ${sess.Transport || ''}`;
+      li.appendChild(span);
+      if (sess.ID) {
+        const btn = document.createElement('button');
+        btn.textContent = 'Kill';
+        btn.onclick = () => killSession(sess.ID);
+        li.appendChild(btn);
+      }
+      return li;
+    }
+
+    function renderJob(job) {
+      const li = document.createElement('li');
+      li.className = 'list-entry';
+      const span = document.createElement('span');
+      span.textContent = `${job.ID || '?'} · ${job.Command || 'cmd'} target ${job.Target || ''} (${job.Status || ''})`;
+      li.appendChild(span);
+      if (job.ID) {
+        const btn = document.createElement('button');
+        btn.textContent = 'Kill';
+        btn.onclick = () => killJob(job.ID);
+        li.appendChild(btn);
+      }
+      return li;
+    }
+
+    function renderBeacon(beacon) {
+      const li = document.createElement('li');
+      li.textContent = `${beacon.ID || '?'} · ${beacon.Name || 'beacon'} (${beacon.OS || ''}) tasks ${beacon.Tasks || ''}`;
+      return li;
+    }
+
+    function loadSessions() {
+      hydrateList('/api/sessions',
+        document.getElementById('brokerStatus'),
+        document.getElementById('sessionList'),
+        renderSession);
+    }
+
+    function loadJobs() {
+      hydrateList('/api/jobs',
+        document.getElementById('jobStatus'),
+        document.getElementById('jobsList'),
+        renderJob);
+    }
+
+    function loadBeacons() {
+      hydrateList('/api/beacons',
+        document.getElementById('beaconStatus'),
+        document.getElementById('beaconList'),
+        renderBeacon);
+    }
+
+    async function killSession(id) {
+      if (!id) return;
+      try {
+        const res = await fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        loadSessions();
+      } catch (err) {
+        alert(`Failed to kill session ${id}: ${err.message}`);
+      }
+    }
+
+    async function killJob(id) {
+      if (!id) return;
+      try {
+        const res = await fetch(`/api/jobs/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        loadJobs();
+      } catch (err) {
+        alert(`Failed to kill job ${id}: ${err.message}`);
+      }
+    }
+
+    loadFiles();
+    loadSessions();
+    loadJobs();
+    loadBeacons();
+
+    const listenerConfigMap = {
+      mtls: { host: 'mtlsHost', port: 'mtlsPort' },
+      http: { host: 'httpHost', port: 'httpPort' },
+      https: { host: 'httpsHost', port: 'httpsPort' },
+      dns: { host: 'dnsHost', port: 'dnsPort', domain: 'dnsDomain' }
+    };
+
+    async function startListener(kind) {
+      const cfg = listenerConfigMap[kind];
+      if (!cfg) return;
+      const statusEl = document.getElementById('listenerStatus');
+      const lhost = (document.getElementById(cfg.host)?.value || '0.0.0.0').trim();
+      const lport = parseInt(document.getElementById(cfg.port)?.value || '0', 10);
+      if (!Number.isInteger(lport) || lport <= 0 || lport > 65535) {
+        statusEl.textContent = `Puerto inválido para ${kind.toUpperCase()}.`;
+        return;
+      }
+      const payload = { lhost, lport };
+      if (cfg.domain) {
+        payload.domain = (document.getElementById(cfg.domain)?.value || '').trim();
+      }
+      statusEl.textContent = `Lanzando ${kind.toUpperCase()}...`;
+      try {
+        const res = await fetch(`/api/listeners/${kind}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP ${res.status}`);
+        }
+        statusEl.textContent = `Listener ${kind.toUpperCase()} iniciado.`;
+        loadJobs();
+      } catch (err) {
+        console.error(`Failed to start ${kind}`, err);
+        statusEl.textContent = `Error (${kind}): ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
